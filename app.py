@@ -99,7 +99,7 @@ with st.sidebar:
         
     # Option to load PDF from GitHub
     if st.button("Load Prompting Guide from GitHub"):
-        pdf_url = "YOUR_RAW_PDF_URL_HERE"  # Replace with your PDF URL
+        pdf_url = "https://github.com/tjbeevor/chatterbox/blob/main/gemini_for_workspace_prompt_guide_october_2024_digital_final.pdf"  # Replace with your PDF URL
         try:
             st.session_state.pdf_content = load_pdf_from_url(pdf_url)
             st.success("Prompting guide loaded successfully!")
