@@ -12,7 +12,7 @@ load_dotenv()
 
 # Configure page settings
 st.set_page_config(
-    page_title="Gemini PDF Assistant",
+    page_title="Gemini Prompting Guide Assistant",
     page_icon="📚",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -41,23 +41,23 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-def load_pdf_from_url(url):
-    """Load PDF content from a URL"""
-    response = requests.get(url)
-    pdf_file = BytesIO(response.content)
-    pdf_reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
-
-def load_pdf_from_file(file):
-    """Load PDF content from an uploaded file"""
-    pdf_reader = PyPDF2.PdfReader(file)
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
-    return text
+def load_pdf_from_github():
+    """Load the Gemini Prompting Guide PDF from GitHub"""
+    # Raw GitHub URL for the PDF
+    pdf_url = "https://raw.githubusercontent.com/tjbeevor/chatterbox/main/gemini_for_workspace_prompt_guide_october_2024_digital_final.pdf"
+    
+    try:
+        response = requests.get(pdf_url)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        pdf_file = BytesIO(response.content)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n\n"  # Add spacing between pages
+        return text
+    except Exception as e:
+        st.error(f"Error loading PDF from GitHub: {str(e)}")
+        return None
 
 # Initialize Gemini
 try:
@@ -73,7 +73,7 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 if "pdf_content" not in st.session_state:
-    st.session_state.pdf_content = None
+    st.session_state.pdf_content = load_pdf_from_github()
 
 def initialize_chat():
     chat = model.start_chat(history=[])
@@ -83,28 +83,31 @@ if "chat" not in st.session_state:
     st.session_state.chat = initialize_chat()
 
 # Title and description
-st.title("📚 Gemini PDF Assistant")
-st.markdown("I'm your AI assistant powered by Google's Gemini model and trained on the Gemini Prompting Guide. How can I help you today?")
+st.title("📚 Gemini Prompting Guide Assistant")
+st.markdown("""
+Welcome! I'm your AI assistant trained on the Gemini Prompting Guide (October 2024 edition). 
+I can help you understand best practices for:
+- Writing effective prompts
+- Using Gemini in Google Workspace
+- Creating role-specific prompts for different job functions
+- And much more!
 
-# Sidebar with PDF loading options
+Ask me anything about the prompting guide!
+""")
+
+# Sidebar with information
 with st.sidebar:
-    st.header("Configuration")
+    st.header("About")
+    st.markdown("""
+    This assistant is powered by Google's Gemini model and is trained specifically on the 
+    October 2024 Prompting Guide for Google Workspace.
     
-    # Option to use local PDF upload
-    uploaded_file = st.file_uploader("Upload PDF", type="pdf")
-    
-    if uploaded_file:
-        st.session_state.pdf_content = load_pdf_from_file(uploaded_file)
-        st.success("PDF loaded successfully!")
-        
-    # Option to load PDF from GitHub
-    if st.button("Load Prompting Guide from GitHub"):
-        pdf_url = "https://github.com/tjbeevor/chatterbox/blob/main/gemini_for_workspace_prompt_guide_october_2024_digital_final.pdf"  # Replace with your PDF URL
-        try:
-            st.session_state.pdf_content = load_pdf_from_url(pdf_url)
-            st.success("Prompting guide loaded successfully!")
-        except Exception as e:
-            st.error(f"Error loading PDF: {str(e)}")
+    The guide covers:
+    - Writing effective prompts
+    - Best practices for different roles
+    - Real-world use cases
+    - Tips for leveling up your prompt writing
+    """)
     
     # Clear chat button
     if st.button("Clear Chat"):
@@ -129,11 +132,11 @@ for message in st.session_state.chat_history:
             """, unsafe_allow_html=True)
 
 # Chat input
-user_input = st.chat_input("Type your message here...")
+user_input = st.chat_input("Ask me anything about Gemini prompting...")
 
 if user_input:
     if not st.session_state.pdf_content:
-        st.warning("Please load a PDF first!")
+        st.error("Error: Unable to load the prompting guide. Please try again later.")
         st.stop()
         
     # Add user message to chat history
@@ -141,13 +144,15 @@ if user_input:
     
     try:
         # Create prompt with context from PDF
-        prompt = f"""Based on the following PDF content:
+        prompt = f"""You are an AI assistant specifically trained on the Gemini Prompting Guide (October 2024 edition). 
+        Use the following content from the guide to provide accurate, helpful responses:
 
-{st.session_state.pdf_content[:10000]}  # Limiting context size
+        {st.session_state.pdf_content}
 
-User question: {user_input}
+        User question: {user_input}
 
-Please provide a relevant and accurate response based on the PDF content."""
+        Please provide a relevant and accurate response based on the prompting guide. If the question isn't 
+        covered in the guide, politely indicate that and stick to information that is contained in the guide."""
         
         # Get response from Gemini
         response = st.session_state.chat.send_message(prompt)
